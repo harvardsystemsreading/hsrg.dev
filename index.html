@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Harvard Systems Reading Group</title>
+  <meta name="description" content="Harvard Undergraduate Systems Reading Group. Hosted by Emmanuel Rassou, Anmay Gupta, and Heorhii Ambartsumov.">
+  <link rel="icon" href="assets/logo-old.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Background layer: fixed to the viewport, animates independently of scrolling. -->
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <!-- Foreground layer: scrolls normally. Content preserved from the 2025-26 Notion site; look is provisional. -->
+  <main id="fg">
+    <section class="hero" aria-hidden="true"></section>
+
+    <div class="content">
+      <h1>Harvard Systems Reading Group</h1>
+      <p>Hosted by Emmanuel Rassou, Anmay Gupta, and Heorhii Ambartsumov</p>
+      <p>Advised by Vlad Cainamisir</p>
+      <p class="muted"><em>inspired by Harvard Systems Reading Group hosted by <a href="https://www.ekzhang.com/">Eric Zhang</a></em></p>
+
+      <h3>Meetings: <mark>Saturday 2-4 pm</mark></h3>
+      <p>Lowell underground lounge - from the entrance, turn right, then downstairs</p>
+
+      <h3>Join the WhatsApp Group</h3>
+      <div class="callout"><span class="icon">📢</span><strong><a href="https://chat.whatsapp.com/BlxUGT0XxdV2uJqQNtEywO">https://chat.whatsapp.com/BlxUGT0XxdV2uJqQNtEywO</a></strong></div>
+
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Session schedule table"><table>
+        <thead>
+          <tr><th>Topic</th><th>Session Material</th><th>Lead</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>GPU Kernel Programming</td><td><a href="https://drive.google.com/file/d/1lp43CMwa4au7ITOxxqqC-GjcbaLIulkB/view?usp=sharing">GPU_Kernel_Programming_HSRG.pdf</a></td><td>Emmanuel Rassou</td><td>02/07/2026</td></tr>
+          <tr><td>Modern Vision Systems (joined by <a href="https://www.etched.com">Etched</a>)</td><td><a href="https://drive.google.com/file/d/1OO9yLqoqE6VDPoWhpiVSjYprCIP4BJHG/view?usp=share_link">Modern_Vision_Systems_HSRG.pdf</a></td><td>Anmay Gupta</td><td>02/14/2026</td></tr>
+          <tr><td>Linux OS (NixOS)</td><td><a href="https://ethancedwards.com/latex/presentations/nixos/nixos.pdf">ethancedwards.com</a></td><td>Ethan Edwards</td><td>02/21/2026</td></tr>
+          <tr><td>OSS inference stack by Robert Shaw from Red Hat</td><td>N/A</td><td>SEAS Systems Seminar (partner)</td><td>03/04/2026</td></tr>
+          <tr><td>Processor Vulnerabilities</td><td><a href="https://drive.google.com/file/d/17x2cUPiRi9oyAnj7aEnzqPQV0P80707k/view?usp=sharing">HSRG_week_4_processor_vulnerabilities.pdf</a></td><td>Heorhii Ambartsumov</td><td>03/07/2026</td></tr>
+          <tr><td>The Collapse of Constrained Physical AI by Jason Jabbour</td><td>N/A</td><td>SEAS Systems Seminar (partner)</td><td>03/18/2026</td></tr>
+          <tr><td>Privacy and data use policy enforcement by end-to-end privacy and data use policy enforcement by Malte Schwarzkopf</td><td>N/A</td><td>SEAS Systems Seminar (partner)</td><td>03/25/2026</td></tr>
+          <tr><td>Hardware and Software Support for Model Alignment</td><td>N/A</td><td>Dr James Mickens</td><td>03/28/2026</td></tr>
+          <tr><td>Sharding and Sparse Attention with MatX</td><td>N/A</td><td>Akshay Mishra &amp; Sanjit Neelam (<a href="https://matx.com">MatX</a>)</td><td>04/04/2026</td></tr>
+          <tr><td>Scalable OS Infrastructure</td><td><a href="https://arxiv.org/pdf/2511.11672">arxiv.org</a></td><td>HSRG Board</td><td>04/11/2026</td></tr>
+          <tr><td>Virtual Private Networks</td><td></td><td>Heorhii Ambartsumov</td><td>04/18/2026</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2>Spring 2026 . We’re so back 🦾</h2>
+
+      <h3>What is this group?</h3>
+      <ul>
+        <li>A space for reading and discussing systems</li>
+        <li>Not a Rust fan club.</li>
+        <li>Hands-on learning space</li>
+        <li>Flat structure, everyone contributes to learning</li>
+      </ul>
+
+      <hr>
+
+      <div class="callout"><span class="icon">📢</span>Everyone can join, regardless of experience or number of classes containing the numbers 6 and 4 on your transcript or number of portraits of Linus Torvalds in your dorm room.</div>
+
+      <p>Bring a laptop, read or browse to the suggested material before. We will be reading during the sessions and hosting discussions afterwards. Everyone is expected to contribute with anything ranging from enlightening knowledge to questions and snacks.</p>
+      <p>You do not need to have attended past weeks.</p>
+
+      <h2>Past talks (from Spring 2026)</h2>
+      <div class="embeds">
+        <iframe src="https://drive.google.com/file/d/1lp43CMwa4au7ITOxxqqC-GjcbaLIulkB/preview" title="GPU Kernel Programming" loading="lazy" allow="autoplay"></iframe>
+        <iframe src="https://drive.google.com/file/d/1OO9yLqoqE6VDPoWhpiVSjYprCIP4BJHG/preview" title="Modern Vision Systems" loading="lazy" allow="autoplay"></iframe>
+        <iframe src="https://drive.google.com/file/d/1o-OevNk8ihz9mHPtW57YNJ3P-ZiQXpNa/preview" title="Past talk 3" loading="lazy" allow="autoplay"></iframe>
+        <iframe src="https://drive.google.com/file/d/17x2cUPiRi9oyAnj7aEnzqPQV0P80707k/preview" title="Processor Vulnerabilities" loading="lazy" allow="autoplay"></iframe>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

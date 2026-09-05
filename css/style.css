@@ -1,0 +1,203 @@
+/* HSRG site styles.
+   Layering: a fixed background canvas (#bg, driven by js/background.js) under a normally
+   scrolling foreground (#fg). The foreground is a monospace terminal-green reading column;
+   js/foreground.js types it in and drives the background's scroll blur. */
+
+:root {
+  /* Foreground palette (F4), ordered by brightness. */
+  --g-heading: #d6ff7a;   /* h1 wordmark, h2, h3, table header */
+  --g-base:    #a8ff5c;   /* body text, list items, table cells, links */
+  --g-mark:    #f2ffbe;   /* formerly highlighted (the meeting time): brightest *and* palest, so it
+                              separates from --g-heading by chroma as well as luminance — the mark
+                              sits inside an h3, where a brightness-only delta is not readable */
+  --g-callout: #5fe33a;   /* formerly boxed 📢 callouts: a deeper, markedly more saturated green
+                              (a pure green rather than the yellow-green of --g-base), so a callout
+                              still reads as "not an ordinary paragraph" now that its box is gone —
+                              #8ef05a was a ~16/255 luminance step from --g-base and invisible */
+  --g-muted:   #6fbf45;   /* formerly gray/italic text */
+  --g-rule:    rgba(168, 255, 92, 0.35);   /* <hr>, iframe frames */
+  --g-hover:   var(--g-mark);   /* link hover: the same "notable" tint as a mark */
+
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Scroll blur (F8). The two *-max/-min values are the taste knobs (set --bg-bright-min to 1
+     for no dimming); js/foreground.js reads them and writes the three live values below. */
+  --bg-blur-max: 10px;
+  --bg-bright-min: 0.7;
+  --bg-blur: 0px;
+  --bg-bright: 1;
+  --bg-scale: 1;
+}
+
+@font-face {
+  font-family: "Anton";
+  src: url("../assets/fonts/Anton-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  /* Variable font, weight axis 100–800. The -variations format hint is preferred where it is
+     understood; the plain truetype entry is the fallback for engines that ignore it. */
+  src: url("../assets/fonts/JetBrainsMono-Variable.ttf") format("truetype-variations"),
+       url("../assets/fonts/JetBrainsMono-Variable.ttf") format("truetype");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+html { background: #000; color: var(--g-base); }
+body {
+  margin: 0;
+  font-family: var(--mono);
+  font-weight: 400;
+  line-height: 1.65;
+  background: #000;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── layers ───────────────────────────────────────────────────────────────── */
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100lvh; /* large viewport: the canvas is not reallocated every time a phone's URL bar collapses/expands mid-scroll (an explicit height wins over bottom: 0) */
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  /* F8: scroll-driven, uniform across the whole screen. The scale-up compensates for the way a
+     CSS blur fades out at the layer's own edges, so no dark rim appears at the viewport border. */
+  filter: blur(var(--bg-blur)) brightness(var(--bg-bright));
+  transform: scale(var(--bg-scale));
+  transform-origin: 50% 50%;
+  will-change: filter, transform;
+}
+#fg {
+  position: relative;
+  z-index: 1;
+}
+.hero {
+  min-height: 100vh;
+}
+.content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
+}
+
+/* ── typography (F2/F4) ───────────────────────────────────────────────────── */
+h1 {
+  font-family: "Anton", Impact, sans-serif;
+  font-weight: 400;
+  font-size: 3rem;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin: 0 0 1.25rem;
+  color: var(--g-heading);
+}
+h2, h3 { color: var(--g-heading); font-weight: 700; letter-spacing: 0.01em; }
+h2 { font-size: 1.5rem; margin: 2.5rem 0 0.75rem; }
+h3 { font-size: 1.15rem; margin: 1.75rem 0 0.5rem; }
+p { margin: 0.75rem 0; color: var(--g-base); }
+/* Long unbroken strings (the WhatsApp invite URL) wrap instead of widening the page (F9). */
+p, li, td, th, .callout, h1, h2, h3 { overflow-wrap: break-word; }
+ul { margin: 0.75rem 0; padding-left: 1.6em; }
+li { color: var(--g-base); margin: 0.15rem 0; }
+li::marker { color: var(--g-rule); }
+
+.muted, .muted em { color: var(--g-muted); }
+
+/* F4: the highlight box is gone; the meeting time is simply the brightest shade. */
+mark { background: none; color: var(--g-mark); }
+
+/* F4: the callouts lose their box and become plain paragraphs with the 📢 icon. */
+.callout {
+  color: var(--g-callout);
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+.callout .icon { margin-right: 0.5rem; }
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--g-rule);
+  text-decoration-color: color-mix(in srgb, currentColor 50%, transparent);
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: from-font;
+}
+a:hover, a:focus-visible { color: var(--g-hover); text-decoration-color: currentColor; }
+
+hr { border: 0; border-top: 1px solid var(--g-rule); margin: 2.25rem 0; }
+
+/* ── table (F3): columns stay aligned, nothing else shows ─────────────────── */
+.table-wrap { overflow-x: auto; margin: 1.25rem 0; }
+/* the wrapper is a keyboard-scrollable region (tabindex="0"): show where focus is */
+.table-wrap:focus-visible { outline: 2px solid var(--g-heading); outline-offset: 3px; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 620px;      /* narrow screens scroll the wrapper instead of squashing the columns */
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+th, td {
+  border: 0;
+  background: none;
+  padding: 0.28rem 1.4rem 0.28rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+th { color: var(--g-heading); font-weight: 700; }
+td { color: var(--g-base); }
+td:last-child, th:last-child { padding-right: 0; white-space: nowrap; }
+
+/* ── embeds (F5): unchanged grid, green frame ─────────────────────────────── */
+.embeds { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.embeds iframe { width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--g-rule); background: #0b0b0b; }
+@media (max-width: 700px) { .embeds { grid-template-columns: 1fr; } }
+
+/* ── typewriter (F6) ──────────────────────────────────────────────────────── */
+/* Every grapheme is its own span. Hidden spans still take their space, so revealing a unit
+   character by character never reflows anything.
+   `opacity: 0` rather than `visibility: hidden`: both hide the glyph and keep its box, but
+   visibility:hidden also drops the text from the accessibility tree, so a screen reader reaching a
+   unit mid-animation would hear an empty or truncated heading/paragraph. With opacity the full text
+   is exposed to assistive technology (and to find-in-page) immediately, whatever the timer is doing. */
+.fg-ch { opacity: 0; }
+.fg-unit.fg-done .fg-ch { opacity: 1; }
+
+/* The UA-generated bullet is not part of any text node, so it is not one of the spans above: without
+   this it painted from first paint, spelling out how many list items were coming long before the
+   queue reached them (F6 "units below the viewport stay invisible until their turn"). `fg-typing` is
+   added the moment a unit starts revealing, so the bullet arrives with its own first character.
+   `list-style: none` only suppresses the marker box, which sits outside the <li>: no layout shift. */
+li.fg-unit:not(.fg-done):not(.fg-typing) { list-style: none; }
+
+/* Instant units (table, hr, embeds): space reserved, then a short fade when their turn comes. */
+.fg-instant { visibility: hidden; opacity: 0; }
+.fg-instant.fg-shown { visibility: visible; opacity: 1; transition: opacity 150ms linear; }
+
+/* The cursor is an empty inline element: zero width, so it neither shifts the text nor creates a
+   line-break opportunity. Its ::before paints a solid block over the next (still hidden)
+   character, in the surrounding text colour. */
+.fg-cursor { display: inline; position: relative; }
+.fg-cursor::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.06em;
+  bottom: 0.06em;
+  width: 1ch;
+  background: currentColor;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-cursor { display: none; }
+  /* must match `.fg-instant.fg-shown`'s specificity (0,2,0) or the 150 ms fade survives */
+  .fg-instant, .fg-instant.fg-shown { transition: none; }
+}
