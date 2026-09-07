@@ -22,11 +22,11 @@ Lowell underground lounge - from the entrance, turn right, then downstairs
 
 | Topic | Session Material | Lead | Date |
 |---|---|---|---|
-| GPU Kernel Programming | [GPU_Kernel_Programming_HSRG.pdf](https://drive.google.com/file/d/1lp43CMwa4au7ITOxxqqC-GjcbaLIulkB/view?usp=sharing) | Emmanuel Rassou | 02/07/2026 |
-| Modern Vision Systems (joined by [Etched](https://www.etched.com)) | [Modern_Vision_Systems_HSRG.pdf](https://drive.google.com/file/d/1OO9yLqoqE6VDPoWhpiVSjYprCIP4BJHG/view?usp=share_link) | Anmay Gupta | 02/14/2026 |
+| GPU Kernel Programming | [GPU_Kernel_Programming_HSRG.pdf](/talks/GPU_Kernel_Programming_HSRG.pdf) | Emmanuel Rassou | 02/07/2026 |
+| Modern Vision Systems (joined by [Etched](https://www.etched.com)) | [Modern_Vision_Systems_HSRG.pdf](/talks/Modern_Vision_Systems_HSRG.pdf) | Anmay Gupta | 02/14/2026 |
 | Nix/NixOS | [ethancedwards.com](https://ethancedwards.com/latex/presentations/nixos/nixos.pdf) | Ethan Edwards | 02/21/2026 |
 | OSS inference stack by Robert Shaw from Red Hat | N/A | SEAS Systems Seminar (partner) | 03/04/2026 |
-| Processor Vulnerabilities | [HSRG_week_4_processor_vulnerabilities.pdf](https://drive.google.com/file/d/17x2cUPiRi9oyAnj7aEnzqPQV0P80707k/view?usp=sharing) | Heorhii Ambartsumov | 03/07/2026 |
+| Processor Vulnerabilities | [HSRG_week_4_processor_vulnerabilities.pdf](/talks/HSRG_week_4_processor_vulnerabilities.pdf) | Heorhii Ambartsumov | 03/07/2026 |
 | The Collapse of Constrained Physical AI by Jason Jabbour | N/A | SEAS Systems Seminar (partner) | 03/18/2026 |
 | Privacy and data use policy enforcement by end-to-end privacy and data use policy enforcement by Malte Schwarzkopf | N/A | SEAS Systems Seminar (partner) | 03/25/2026 |
 | Hardware and Software Support for Model Alignment | N/A | Dr James Mickens | 03/28/2026 |
@@ -47,8 +47,8 @@ You do not need to have attended past weeks.
 ## Past talks (from Spring 2026)
 
 <div class="embeds">
-  <iframe src="https://drive.google.com/file/d/1lp43CMwa4au7ITOxxqqC-GjcbaLIulkB/preview" title="GPU Kernel Programming" loading="lazy" allow="autoplay"></iframe>
-  <iframe src="https://drive.google.com/file/d/1OO9yLqoqE6VDPoWhpiVSjYprCIP4BJHG/preview" title="Modern Vision Systems" loading="lazy" allow="autoplay"></iframe>
-  <iframe src="https://drive.google.com/file/d/1o-OevNk8ihz9mHPtW57YNJ3P-ZiQXpNa/preview" title="Past talk 3" loading="lazy" allow="autoplay"></iframe>
-  <iframe src="https://drive.google.com/file/d/17x2cUPiRi9oyAnj7aEnzqPQV0P80707k/preview" title="Processor Vulnerabilities" loading="lazy" allow="autoplay"></iframe>
+  <iframe src="/talks/GPU_Kernel_Programming_HSRG.pdf" title="GPU Kernel Programming" loading="lazy"></iframe>
+  <iframe src="/talks/Modern_Vision_Systems_HSRG.pdf" title="Modern Vision Systems" loading="lazy"></iframe>
+  <iframe src="/talks/HSRG_week_3_nixos.pdf" title="Linux OS (NixOS)" loading="lazy"></iframe>
+  <iframe src="/talks/HSRG_week_4_processor_vulnerabilities.pdf" title="Processor Vulnerabilities" loading="lazy"></iframe>
 </div>
