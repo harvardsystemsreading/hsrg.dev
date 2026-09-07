@@ -26,8 +26,8 @@ The image is a multi-stage build: Node builds `dist/`, the stock `nginx:alpine` 
 
 ## Layout
 
-- `src/pages/index.astro` — the page; `src/layouts/Base.astro` — document shell (canvas + content column)
-- `src/data/sessions.ts` — the session schedule and past-talk embeds (edit this to add a session)
+- `src/pages/index.md` — the page content, in markdown (the schedule is a table; edit it to add a session)
+- `src/layouts/Base.astro` — document shell (canvas + content column), used as the markdown `layout:`
 - `src/main.ts` — entry point; boots the background and foreground
 - `src/background.ts`, `src/logoSampler.ts` — three.js WebGL background (see `docs/background-spec.md`)
 - `src/foreground.ts` — typewriter reveal and scroll blur (see `docs/foreground-spec.md`)

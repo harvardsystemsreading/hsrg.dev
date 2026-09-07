@@ -1,13 +1,13 @@
 ---
 // Page shell: the fixed background canvas (#bg) under the normally scrolling foreground (#fg).
 // src/main.ts boots both engines; it is bundled and injected by Astro as a module script.
+// Used as the `layout:` of the markdown pages in src/pages/, which pass their frontmatter.
 import '../styles/style.css';
 
 interface Props {
-  title: string;
-  description: string;
+  frontmatter: { title: string; description: string };
 }
-const { title, description } = Astro.props;
+const { title, description } = Astro.props.frontmatter;
 ---
 <!doctype html>
 <html lang="en">
