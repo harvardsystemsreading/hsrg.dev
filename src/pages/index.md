@@ -49,6 +49,6 @@ You do not need to have attended past weeks.
 <div class="embeds">
   <iframe src="/talks/GPU_Kernel_Programming_HSRG.pdf" title="GPU Kernel Programming" loading="lazy"></iframe>
   <iframe src="/talks/Modern_Vision_Systems_HSRG.pdf" title="Modern Vision Systems" loading="lazy"></iframe>
-  <iframe src="/talks/HSRG_week_3_nixos.pdf" title="Linux OS (NixOS)" loading="lazy"></iframe>
+  <iframe src="https://ethancedwards.com/latex/presentations/nixos/nixos.pdf" title="Linux OS (NixOS)" loading="lazy"></iframe>
   <iframe src="/talks/HSRG_week_4_processor_vulnerabilities.pdf" title="Processor Vulnerabilities" loading="lazy"></iframe>
 </div>
