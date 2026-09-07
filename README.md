@@ -14,6 +14,16 @@ npm run build      # production build into dist/
 npm run preview    # serve dist/ locally
 ```
 
+## Docker
+
+```
+docker build -t hsrg.dev .
+docker run --rm -p 8080:80 hsrg.dev     # http://localhost:8080
+```
+
+The image is a multi-stage build: Node builds `dist/`, the stock `nginx:alpine` serves it on port 80
+(HTTP only; TLS is the reverse proxy's job).
+
 ## Layout
 
 - `src/pages/index.astro` — the page; `src/layouts/Base.astro` — document shell (canvas + content column)
