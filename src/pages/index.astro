@@ -1,0 +1,63 @@
+---
+// Content preserved from the 2025-26 Notion site; look is provisional.
+import Base from '../layouts/Base.astro';
+import Rich from '../components/Rich.astro';
+import { sessions, pastTalks } from '../data/sessions';
+
+const whatsapp = 'https://chat.whatsapp.com/BlxUGT0XxdV2uJqQNtEywO';
+---
+<Base
+  title="Harvard Systems Reading Group"
+  description="Harvard Undergraduate Systems Reading Group. Hosted by Emmanuel Rassou, Anmay Gupta, and Heorhii Ambartsumov."
+>
+  <h1>Harvard Systems Reading Group</h1>
+  <p>Hosted by Emmanuel Rassou, Anmay Gupta, and Heorhii Ambartsumov</p>
+  <p>Advised by Vlad Cainamisir</p>
+  <p class="muted"><em>inspired by Harvard Systems Reading Group hosted by <a href="https://www.ekzhang.com/">Eric Zhang</a></em></p>
+
+  <h3>Meetings: <mark>Saturday 2-4 pm</mark></h3>
+  <p>Lowell underground lounge - from the entrance, turn right, then downstairs</p>
+
+  <h3>Join the WhatsApp Group</h3>
+  <div class="callout"><span class="icon">📢</span><strong><a href={whatsapp}>{whatsapp}</a></strong></div>
+
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Session schedule table"><table>
+    <thead>
+      <tr><th>Topic</th><th>Session Material</th><th>Lead</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+      {sessions.map((s) => (
+        <tr>
+          <td><Rich value={s.topic} /></td>
+          <td>{typeof s.material === 'object' ? <a href={s.material.href}>{s.material.text}</a> : s.material}</td>
+          <td><Rich value={s.lead} /></td>
+          <td>{s.date}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table></div>
+
+  <h2>Spring 2026 . We’re so back 🦾</h2>
+
+  <h3>What is this group?</h3>
+  <ul>
+    <li>A space for reading and discussing systems</li>
+    <li>Not a Rust fan club.</li>
+    <li>Hands-on learning space</li>
+    <li>Flat structure, everyone contributes to learning</li>
+  </ul>
+
+  <hr>
+
+  <div class="callout"><span class="icon">📢</span>Everyone can join, regardless of experience or number of classes containing the numbers 6 and 4 on your transcript or number of portraits of Linus Torvalds in your dorm room.</div>
+
+  <p>Bring a laptop, read or browse to the suggested material before. We will be reading during the sessions and hosting discussions afterwards. Everyone is expected to contribute with anything ranging from enlightening knowledge to questions and snacks.</p>
+  <p>You do not need to have attended past weeks.</p>
+
+  <h2>Past talks (from Spring 2026)</h2>
+  <div class="embeds">
+    {pastTalks.map((t) => (
+      <iframe src={`https://drive.google.com/file/d/${t.driveId}/preview`} title={t.title} loading="lazy" allow="autoplay"></iframe>
+    ))}
+  </div>
+</Base>
