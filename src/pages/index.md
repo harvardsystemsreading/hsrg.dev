@@ -6,13 +6,11 @@ description: Harvard Undergraduate Systems Reading Group. Hosted by Emmanuel Ras
 
 # Harvard Systems Reading Group
 
-Hosted by Emmanuel Rassou, Anmay Gupta, and Heorhii Ambartsumov
-
-Advised by Vlad Cainamisir
+Hosted by Emmanuel Rassou, Ethan Carter Edwards, Sam Huang, and Heorhii Ambartsumov
 
 <p class="muted"><em>inspired by Harvard Systems Reading Group hosted by <a href="https://www.ekzhang.com/">Eric Zhang</a></em></p>
 
-### Meetings: <mark>Saturday 2-4 pm</mark>
+### Meetings: <mark>TBD</mark>
 
 Lowell underground lounge - from the entrance, turn right, then downstairs
 
@@ -26,7 +24,7 @@ Lowell underground lounge - from the entrance, turn right, then downstairs
 |---|---|---|---|
 | GPU Kernel Programming | [GPU_Kernel_Programming_HSRG.pdf](https://drive.google.com/file/d/1lp43CMwa4au7ITOxxqqC-GjcbaLIulkB/view?usp=sharing) | Emmanuel Rassou | 02/07/2026 |
 | Modern Vision Systems (joined by [Etched](https://www.etched.com)) | [Modern_Vision_Systems_HSRG.pdf](https://drive.google.com/file/d/1OO9yLqoqE6VDPoWhpiVSjYprCIP4BJHG/view?usp=share_link) | Anmay Gupta | 02/14/2026 |
-| Linux OS (NixOS) | [ethancedwards.com](https://ethancedwards.com/latex/presentations/nixos/nixos.pdf) | Ethan Edwards | 02/21/2026 |
+| Nix/NixOS | [ethancedwards.com](https://ethancedwards.com/latex/presentations/nixos/nixos.pdf) | Ethan Edwards | 02/21/2026 |
 | OSS inference stack by Robert Shaw from Red Hat | N/A | SEAS Systems Seminar (partner) | 03/04/2026 |
 | Processor Vulnerabilities | [HSRG_week_4_processor_vulnerabilities.pdf](https://drive.google.com/file/d/17x2cUPiRi9oyAnj7aEnzqPQV0P80707k/view?usp=sharing) | Heorhii Ambartsumov | 03/07/2026 |
 | The Collapse of Constrained Physical AI by Jason Jabbour | N/A | SEAS Systems Seminar (partner) | 03/18/2026 |
@@ -37,15 +35,6 @@ Lowell underground lounge - from the entrance, turn right, then downstairs
 | Virtual Private Networks | | Heorhii Ambartsumov | 04/18/2026 |
 
 </div>
-
-## Spring 2026 . We’re so back 🦾
-
-### What is this group?
-
-- A space for reading and discussing systems
-- Not a Rust fan club.
-- Hands-on learning space
-- Flat structure, everyone contributes to learning
 
 ---
 
