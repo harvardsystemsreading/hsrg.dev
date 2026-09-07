@@ -2,7 +2,5 @@ node_modules
 dist
 .astro
 .git
-old-site
-docs
 *.md
 .DS_Store
