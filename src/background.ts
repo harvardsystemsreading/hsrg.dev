@@ -4,11 +4,46 @@
 // time t (seconds): renderAt(t) produces the same pixels for the same t, and the whole
 // picture repeats every CONFIG.T_CYCLE seconds.
 //
-// Layout:  §1 CONFIG   §2 banner/helpers   §3 shaders   §4 scene build   §5 time + resize
+// Layout:  §0 types   §1 CONFIG   §2 banner/helpers   §3 shaders   §4 scene build   §5 time + resize
 // Spec:    docs/background-spec.md (requirements R1-R11).
 
-import * as THREE from './three.module.js';
-import { sampleLogo, mulberry32 } from './logoSampler.js';
+import * as THREE from 'three';
+import { sampleLogo, mulberry32, type LogoSample } from './logoSampler';
+
+// ───────────────────────────────────────────────────────────────────────────── §0 types
+export interface BackgroundOptions {
+  canvas: HTMLCanvasElement | null;
+  headless?: boolean;       // show the error banner; render as soon as assets are ready
+  seekSeconds?: number | null;   // clock value of the first rendered frame
+  paused?: boolean;         // render that frame only, do not advance
+}
+
+/** Layout numbers, exposed for the headless ?stats=1 overlay and `canvas.dataset.stats`. */
+export interface BackgroundStats {
+  n?: number; wInk?: number; hInk?: number; ratio?: number; stride?: number; fontOk?: boolean; webgl2?: boolean;
+  w?: number; h?: number; dpr?: number; A?: number; rMax?: number; rMin?: number; zL?: number; logoW?: number; logoPx?: number;
+  phiCutDeg?: number; merDropped?: number;
+}
+
+export interface BackgroundApi {
+  seek: (t: number) => void;
+  pause: () => void;
+  play: () => void;
+  time: () => number;
+  render: () => void;
+  info: () => THREE.WebGLInfo['render'] | undefined;
+  ready: Promise<BackgroundApi>;
+  config: typeof CONFIG;
+  stats: BackgroundStats | null;
+}
+
+type Ramp = readonly [number, number];   // [start, end] in cycle seconds
+type Uniforms = Record<string, THREE.IUniform>;
+type Banner = (message: string, color?: string) => void;
+
+declare global {
+  interface Window { __hsrgBg?: BackgroundApi }
+}
 
 // ───────────────────────────────────────────────────────────────────────────── §1 CONFIG
 export const CONFIG = {
@@ -45,7 +80,7 @@ export const CONFIG = {
   // hold choreography (cycle seconds). Sequenced, never overlapped: the underlay is fully in BEFORE
   // the dots recede, and the dots are fully back BEFORE the underlay fades, so the letters' coverage
   // never dips below the dots-only level mid-crossfade (asserted in assertConfig).
-  UNDERLAY_IN: [12.5, 13.0], DOTS_RECEDE: [13.0, 13.4], DOTS_RETURN: [56.9, 57.3], UNDERLAY_OUT: [57.3, 57.8],
+  UNDERLAY_IN: [12.5, 13.0] as Ramp, DOTS_RECEDE: [13.0, 13.4] as Ramp, DOTS_RETURN: [56.9, 57.3] as Ramp, UNDERLAY_OUT: [57.3, 57.8] as Ramp,
   HOLD_DOT_ALPHA: 0.05,   // dot alpha while receded (crisp underlay owns the edges; low enough that edge dots leave no speckled fringe)
   HOLD_DOT_SIZE: 0.6,     // dot size factor while receded
   // particle cycle (seconds)
@@ -56,7 +91,7 @@ export const CONFIG = {
   F_VAR: 0.12,            // per-particle flight duration F * (1 +- F_VAR): the stream disperses along the path instead of travelling as one wall
   R0: 57.8, D_MAX: 0.9, R_DUR: 2.2,   // release window; each particle's release lasts R_DUR - D_MAX
   REL_ORDER: 0.7,         // release delay d = D_MAX * mix(q_d, spawn order, REL_ORDER): the logo lets go roughly in the order it formed
-  REL_FADE: [0.1, 0.6],   // release progress over which a particle's alpha goes to 0 (its motion continues, unseen)
+  REL_FADE: [0.1, 0.6] as Ramp,   // release progress over which a particle's alpha goes to 0 (its motion continues, unseen)
   REL_PULL: 0.7,          // release: fraction of the way toward the throat's centre (0, 0, zL) a particle has travelled at rho = 1 (x 0.7..1.3 per particle)
   ANG_IN: 0.2, ANG_OUT: 0.15,  // angular progress g(u): trapezoid speed profile, ramps up over the first ANG_IN and down over the last ANG_OUT of the flight, cruises between
   CLEAR_MIN: 0.10, CLEAR_RAND: 0.25,  // orbit clearance from the surface: CLEAR_MIN + CLEAR_RAND * q * min(1, aspect / CLEAR_ASPECT)
@@ -78,18 +113,18 @@ const SPAN = 2 * CONFIG.Y_EXT;          // ring pattern wraps after this much sc
 const UNDERLAY_PAD = 8;                 // raster px of black around the underlay crop
 
 // ─────────────────────────────────────────────────────────────────── §2 helpers / banner
-const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
-const mod = (x, m) => ((x % m) + m) % m;
-const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-const glslFloat = (x) => { const s = String(x); return /[.eE]/.test(s) ? s : `${s}.0`; };
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+const mod = (x: number, m: number) => ((x % m) + m) % m;
+const smoothstep = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const glslFloat = (x: number) => { const s = String(x); return /[.eE]/.test(s) ? s : `${s}.0`; };
 
 /** Funnel radius at height y (JS twin of the GLSL radius()). */
-function radiusAt(y, rMin, rMax) {
+function radiusAt(y: number, rMin: number, rMax: number): number {
   const q = y / CONFIG.SIGMA;
   return rMin + (rMax - rMin) * (1 - Math.exp(-q * q));
 }
 /** dr/dy (JS twin of the GLSL dradius()). */
-function dradiusAt(y, rMin, rMax) {
+function dradiusAt(y: number, rMin: number, rMax: number): number {
   const q = y / CONFIG.SIGMA;
   return (rMax - rMin) * Math.exp(-q * q) * 2 * q / CONFIG.SIGMA;
 }
@@ -105,7 +140,7 @@ function dradiusAt(y, rMin, rMax) {
  * first dropped meridian (by their distances) and the shader fades over MERIDIAN_BAND around it,
  * so a resize slides a meridian in or out over ~1 px of distance instead of popping it.
  */
-function meridianCut(rMin, rMax, aspect, halfHeightPx) {
+function meridianCut(rMin: number, rMax: number, aspect: number, halfHeightPx: number) {
   const { D, MERIDIANS: M, Y_EXT, MERIDIAN_MIN_PX: MIN } = CONFIG;
   const spacing = 2 * Math.PI / M;
   // silhouette on screen, tabulated over world y: limb azimuth cos(phiL) = (r - y r') / D
@@ -117,11 +152,11 @@ function meridianCut(rMin, rMax, aspect, halfHeightPx) {
     const f = D / (D - r * cosL);
     silX[i] = r * sinL * f; silY[i] = y * f;               // silY is monotone in y for this profile
   }
-  const silAt = (ys) => {                                   // silhouette x and dx/dy at screen height ys
+  const silAt = (ys: number) => {                                   // silhouette x and dx/dy at screen height ys
     let lo = 0, hi = N;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (silY[mid] <= ys) lo = mid; else hi = mid; }
-    const dy = silY[hi] - silY[lo], dx = silX[hi] - silX[lo];
-    return { x: silX[lo] + dx * (ys - silY[lo]) / dy, slope: dx / dy };
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (silY[mid]! <= ys) lo = mid; else hi = mid; }
+    const dy = silY[hi]! - silY[lo]!, dx = silX[hi]! - silX[lo]!;
+    return { x: silX[lo]! + dx * (ys - silY[lo]!) / dy, slope: dx / dy };
   };
   const NS = 320, minDist = new Float64Array(M / 2).fill(Infinity);
   for (let k = 1; k <= M / 2; k++) {                       // phi_k = (k - 0.5) * spacing, right side
@@ -134,16 +169,16 @@ function meridianCut(rMin, rMax, aspect, halfHeightPx) {
       if (Math.abs(ys) > 1 || xs > aspect) continue;        // off-screen
       const sil = silAt(ys);
       const d = (sil.x - xs) / Math.sqrt(1 + sil.slope * sil.slope) * halfHeightPx;
-      if (d < minDist[k - 1]) minDist[k - 1] = d;
+      if (d < minDist[k - 1]!) minDist[k - 1] = d;
     }
   }
   let phiCut = Math.PI, dropped = 0;                        // default: nothing dropped
   for (let j = 0; j < M / 2; j++) {
-    if (minDist[j] >= MIN) continue;
+    if (minDist[j]! >= MIN) continue;
     dropped = minDist.filter((d) => Number.isFinite(d) && d < MIN).length;   // visible meridians removed, per side
     if (j === 0) { phiCut = 0; break; }
-    const prev = minDist[j - 1];
-    const t = clamp((prev - MIN) / (prev - minDist[j]), 0, 1);
+    const prev = minDist[j - 1]!;
+    const t = clamp((prev - MIN) / (prev - minDist[j]!), 0, 1);
     phiCut = j * spacing + t * spacing;                     // between phi_{j-1} = (j - 0.5) sp and phi_j
     phiCut -= 0.5 * spacing;
     break;
@@ -155,8 +190,8 @@ function meridianCut(rMin, rMax, aspect, halfHeightPx) {
  * Error banner: console.error always; a fixed DOM panel when headless so failures show
  * up in screenshots. Installed before anything else can throw.
  */
-function installBanner(headless) {
-  const show = (message, color) => {
+function installBanner(headless: boolean): Banner {
+  const show: Banner = (message, color) => {
     if (color === undefined) console.error(message); else console.warn(message);
     if (!headless) return;
     let el = document.getElementById('bg-error');
@@ -172,20 +207,20 @@ function installBanner(headless) {
     line.textContent = String(message);
     el.appendChild(line);
   };
-  window.addEventListener('error', (e) => {
-    const stack = e.error && e.error.stack ? `\n${e.error.stack}` : '';
+  window.addEventListener('error', (e: ErrorEvent) => {
+    const stack = e.error instanceof Error && e.error.stack ? `\n${e.error.stack}` : '';
     show(`[error] ${e.message} (${e.filename}:${e.lineno})${stack}`);
   });
-  window.addEventListener('unhandledrejection', (e) => {
-    const r = e.reason;
-    show(`[unhandledrejection] ${r && r.stack ? r.stack : r}`);
+  window.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
+    const r: unknown = e.reason;
+    show(`[unhandledrejection] ${r instanceof Error && r.stack ? r.stack : r}`);
   });
   return show;
 }
 
 function assertConfig() {
   const C = CONFIG;
-  const must = (ok, what) => { if (!ok) throw new Error(`CONFIG invariant failed: ${what}`); };
+  const must = (ok: boolean, what: string) => { if (!ok) throw new Error(`CONFIG invariant failed: ${what}`); };
   must(Number.isInteger(Math.round((2 * C.Y_EXT / C.RING_DY) * 1e6) / 1e6), '2*Y_EXT/RING_DY integer');
   must(C.MERIDIANS % 2 === 0, 'MERIDIANS even');
   must(C.SPAWN_LEAD >= 0 && C.SPAWN_LEAD < C.T_STREAM, '0 <= SPAWN_LEAD < T_STREAM');
@@ -206,10 +241,10 @@ function assertConfig() {
   must(C.MERIDIAN_BAND > 0 && C.MERIDIAN_BAND <= 0.5, '0 < MERIDIAN_BAND <= 0.5');
   // hold choreography is strictly sequenced (see CONFIG): every particle has arrived, underlay in,
   // dots recede, dots return, underlay out, release.
-  const seq = [['T_STREAM - SPAWN_LEAD + F*(1+F_VAR)', C.T_STREAM - C.SPAWN_LEAD + C.F * (1 + C.F_VAR)], ['UNDERLAY_IN[0]', C.UNDERLAY_IN[0]], ['UNDERLAY_IN[1]', C.UNDERLAY_IN[1]],
+  const seq: [string, number][] = [['T_STREAM - SPAWN_LEAD + F*(1+F_VAR)', C.T_STREAM - C.SPAWN_LEAD + C.F * (1 + C.F_VAR)], ['UNDERLAY_IN[0]', C.UNDERLAY_IN[0]], ['UNDERLAY_IN[1]', C.UNDERLAY_IN[1]],
     ['DOTS_RECEDE[0]', C.DOTS_RECEDE[0]], ['DOTS_RECEDE[1]', C.DOTS_RECEDE[1]], ['DOTS_RETURN[0]', C.DOTS_RETURN[0]],
     ['DOTS_RETURN[1]', C.DOTS_RETURN[1]], ['UNDERLAY_OUT[0]', C.UNDERLAY_OUT[0]], ['UNDERLAY_OUT[1]', C.UNDERLAY_OUT[1]], ['R0', C.R0]];
-  for (let i = 1; i < seq.length; i++) must(seq[i - 1][1] <= seq[i][1], `${seq[i - 1][0]} <= ${seq[i][0]}`);
+  for (let i = 1; i < seq.length; i++) must(seq[i - 1]![1] <= seq[i]![1], `${seq[i - 1]![0]} <= ${seq[i]![0]}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────── §3 shaders
@@ -284,9 +319,9 @@ void main() {
 
 // Particles: all motion in the vertex shader from uCycle (t mod T_CYCLE). Cylindrical
 // interpolation (rho, theta, y) keeps every path outside the body; the hold pose is exact.
-function particleVert() {
+function particleVert(): string {
   const C = CONFIG;
-  const consts = [
+  const consts = ([
     ['T_CYCLE', C.T_CYCLE], ['T_STREAM', C.T_STREAM], ['SPAWN_LEAD', C.SPAWN_LEAD], ['F', C.F], ['R0', C.R0], ['D_MAX', C.D_MAX], ['R_DUR', C.R_DUR],
     ['REL_ORDER', C.REL_ORDER], ['REL_FADE0', C.REL_FADE[0]], ['REL_FADE1', C.REL_FADE[1]], ['REL_PULL', C.REL_PULL], ['F_VAR', C.F_VAR],
     ['ANG_IN', C.ANG_IN], ['ANG_OUT', C.ANG_OUT], ['CLEAR_MIN', C.CLEAR_MIN], ['CLEAR_RAND', C.CLEAR_RAND], ['CLEAR_ASPECT', C.CLEAR_ASPECT],
@@ -295,7 +330,7 @@ function particleVert() {
     ['ENTRY_ALPHA', C.ENTRY_ALPHA], ['FLIGHT_ALPHA', C.FLIGHT_ALPHA], ['FADE_IN', C.FADE_IN], ['CAM_D', C.D],
     ['POINT_MIN_PX', C.POINT_MIN_PX], ['POINT_MAX_PX', C.POINT_MAX_PX],
     ['HOLD_DOT_ALPHA', C.HOLD_DOT_ALPHA], ['HOLD_DOT_SIZE', C.HOLD_DOT_SIZE],
-  ].map(([k, v]) => `const float ${k} = ${glslFloat(v)};`).join('\n');
+  ] as [string, number][]).map(([k, v]) => `const float ${k} = ${glslFloat(v)};`).join('\n');
   return /* glsl */`
 ${RADIUS_GLSL}
 ${consts}
@@ -376,7 +411,7 @@ void main() {
 
 // ──────────────────────────────────────────────────────────────────────── §4 scene build
 /** Parametric grid over (theta, y); the position attribute stores the parameters. */
-function buildBodyGeometry() {
+function buildBodyGeometry(): THREE.BufferGeometry {
   const { NY, NTH, Y_EXT } = CONFIG;
   const cols = NTH + 1, rows = NY + 1;                  // closed in theta: last column = first
   const pos = new Float32Array(rows * cols * 3);
@@ -407,15 +442,15 @@ function buildBodyGeometry() {
 }
 
 /** One point per logo sample: position = (x_n, y_n, spawnTime), aRand + aRand2 = 6 seeded randoms. */
-function buildParticleGeometry(logo, rand) {
+function buildParticleGeometry(logo: LogoSample, rand: () => number): THREE.BufferGeometry {
   const { n, samples } = logo;
   const pos = new Float32Array(n * 3);
   const rnd = new Float32Array(n * 4);
   const rnd2 = new Float32Array(n * 2);
   for (let i = 0; i < n; i++) {
     const qm = rand(), qy = rand(), qsz = rand(), qd = rand(), qs = rand(), qf = rand(), qr = rand();
-    pos[i * 3] = samples[i * 2];
-    pos[i * 3 + 1] = samples[i * 2 + 1];
+    pos[i * 3] = samples[i * 2]!;
+    pos[i * 3 + 1] = samples[i * 2 + 1]!;
     pos[i * 3 + 2] = -CONFIG.SPAWN_LEAD + CONFIG.T_STREAM * clamp(0.7 * i / n + 0.3 * qs, 0, 0.999);  // left -> right, 30 % scatter
     rnd[i * 4] = qm; rnd[i * 4 + 1] = qy; rnd[i * 4 + 2] = qsz; rnd[i * 4 + 3] = qd;
     rnd2[i * 2] = qf; rnd2[i * 2 + 1] = qr;
@@ -429,13 +464,8 @@ function buildParticleGeometry(logo, rand) {
 }
 
 // ────────────────────────────────────────────────────────────────── §5 startBackground
-/**
- * Boots the background on `canvas`. Options (from js/main.js):
- *   headless     show the error banner; render as soon as assets are ready
- *   seekSeconds  clock value of the first rendered frame
- *   paused       render that frame only, do not advance
- */
-export function startBackground(opts = {}) {
+/** Boots the background on `canvas`. Options (from src/main.ts): see BackgroundOptions. */
+export function startBackground(opts: BackgroundOptions): BackgroundApi {
   const { canvas, headless = false } = opts;
   const show = installBanner(headless);
   const params = new URLSearchParams(location.search);
@@ -445,34 +475,37 @@ export function startBackground(opts = {}) {
   const C = CONFIG;
 
   // ── clock (a pure function of wall time; nothing accumulates)
-  let base = Number.isFinite(opts.seekSeconds) ? Math.max(0, opts.seekSeconds) : 0;
+  let base = typeof opts.seekSeconds === 'number' && Number.isFinite(opts.seekSeconds) ? Math.max(0, opts.seekSeconds) : 0;
   let stamp = performance.now();
   let playing = !opts.paused;
   let ready = false;
   const time = () => (playing ? base + (performance.now() - stamp) / 1000 : base);
 
-  let renderer, camera, scene, body, ghost, points, underlay, logo;
-  const U = {};           // shared uniforms (same {value} objects in every material)
-  let readyResolve, readyReject;
-  const readyPromise = new Promise((res, rej) => { readyResolve = res; readyReject = rej; });
+  let renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera, scene: THREE.Scene;
+  let body: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, ghost: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  let points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>, underlay: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  let logo: LogoSample;
+  const U: Uniforms = {};           // shared uniforms (same {value} objects in every material)
+  let readyResolve!: (api: BackgroundApi) => void, readyReject!: (err: unknown) => void;
+  const readyPromise = new Promise<BackgroundApi>((res, rej) => { readyResolve = res; readyReject = rej; });
   readyPromise.catch(() => {});   // init failures are reported by the banner; no unhandled-rejection duplicate
-  const api = { seek, pause, play, time, render: () => renderAt(time()), info: () => renderer && renderer.info.render, ready: readyPromise, config: C, stats: null };
+  const api: BackgroundApi = { seek, pause, play, time, render: () => renderAt(time()), info: () => renderer && renderer.info.render, ready: readyPromise, config: C, stats: null };
   window.__hsrgBg = api;
 
-  function renderAt(t) {
+  function renderAt(t: number) {
     if (!ready) return;
     const c = mod(t, C.T_CYCLE);                       // everything below depends on c only,
-    U.uCycle.value = c;                                //   so frames at t and t + T_CYCLE are bit-identical
-    U.uScroll.value = mod(C.RING_SPEED * c, SPAN);     // ring phase is continuous at the wrap (see assertConfig)
-    const ramp = (r) => smoothstep(r[0], r[1], c);
+    U.uCycle!.value = c;                               //   so frames at t and t + T_CYCLE are bit-identical
+    U.uScroll!.value = mod(C.RING_SPEED * c, SPAN);    // ring phase is continuous at the wrap (see assertConfig)
+    const ramp = (r: Ramp) => smoothstep(r[0], r[1], c);
     const o = C.UNDERLAY_MAX * ramp(C.UNDERLAY_IN) * (1 - ramp(C.UNDERLAY_OUT));   // crisp underlay opacity
-    U.uRecede.value = ramp(C.DOTS_RECEDE) * (1 - ramp(C.DOTS_RETURN));           // dots recede only while it is fully in
+    U.uRecede!.value = ramp(C.DOTS_RECEDE) * (1 - ramp(C.DOTS_RETURN));           // dots recede only while it is fully in
     underlay.material.opacity = o;
     underlay.visible = o > 0.001;
     renderer.render(scene, camera);
     if (showStats) updateStatsOverlay();
   }
-  function seek(t) { base = Math.max(0, +t || 0); stamp = performance.now(); renderAt(base); }
+  function seek(t: number) { base = Math.max(0, +t || 0); stamp = performance.now(); renderAt(base); }
   function pause() { base = time(); playing = false; if (renderer) renderer.setAnimationLoop(null); }
   function play() {
     base = time(); stamp = performance.now(); playing = true;
@@ -480,8 +513,9 @@ export function startBackground(opts = {}) {
   }
 
   // ── layout: everything that depends on the viewport, uniforms only (no geometry rebuilt)
-  let lastLayout = null;   // {w, h, dpr} last applied; visualViewport fires resize events that change nothing
-  function layout() {
+  let lastLayout: { w: number; h: number; dpr: number } | null = null;   // {w, h, dpr} last applied; visualViewport fires resize events that change nothing
+  function layout(): boolean {
+    const canvas = opts.canvas!;
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, C.DPR_MAX);
@@ -505,16 +539,16 @@ export function startBackground(opts = {}) {
       zL = radiusAt(0.5 * logoW * logo.ratio, rMin, rMax) + C.LOGO_CLEAR;
     }
     const db = renderer.getDrawingBufferSize(new THREE.Vector2());
-    U.uAspect.value = A;
-    U.uRmin.value = rMin; U.uRmax.value = rMax;
-    U.uLogoW.value = logoW; U.uZL.value = zL;
-    U.uDotWorld.value = C.DOT_OVERLAP * logo.stride * logoW / logo.wInk;
-    U.uLinePx.value = C.LINE_PX * dpr;
-    U.uSilPx.value = C.SIL_PX * dpr;
+    U.uAspect!.value = A;
+    U.uRmin!.value = rMin; U.uRmax!.value = rMax;
+    U.uLogoW!.value = logoW; U.uZL!.value = zL;
+    U.uDotWorld!.value = C.DOT_OVERLAP * logo.stride * logoW / logo.wInk;
+    U.uLinePx!.value = C.LINE_PX * dpr;
+    U.uSilPx!.value = C.SIL_PX * dpr;
     const mer = meridianCut(rMin, rMax, A, h / 2);         // whole-meridian visibility (CSS px criterion)
-    U.uPhiCut.value = mer.phiCut;
-    U.uPhiBand.value = C.MERIDIAN_BAND * 2 * Math.PI / C.MERIDIANS;
-    U.uHalfHeightPx.value = db.y / 2;
+    U.uPhiCut!.value = mer.phiCut;
+    U.uPhiBand!.value = C.MERIDIAN_BAND * 2 * Math.PI / C.MERIDIANS;
+    U.uHalfHeightPx!.value = db.y / 2;
     underlay.scale.set(logoW * logo.crop.width / logo.wInk, logoW * logo.crop.height / logo.wInk, 1);
     underlay.position.set(0, 0, zL - 0.002);
     api.stats = Object.assign(api.stats || {}, { w, h, dpr, A, rMax, rMin, zL, logoW, logoPx: logoW * (h / 2) * C.D / (C.D - zL),
@@ -536,9 +570,9 @@ export function startBackground(opts = {}) {
     }
     const r = renderer.info.render;
     el.textContent = `innerW/H ${window.innerWidth}x${window.innerHeight} client ${st.w}x${st.h} dpr ${st.dpr}\n`
-      + `A ${st.A.toFixed(3)} rMax ${st.rMax.toFixed(3)} rMin ${st.rMin.toFixed(3)} zL ${st.zL.toFixed(3)} logoW ${st.logoW.toFixed(3)} logoPx ${st.logoPx.toFixed(0)} phiCut ${st.phiCutDeg.toFixed(1)} (${st.merDropped}/side dropped)\n`
-      + `n ${st.n} ink ${st.wInk}x${st.hInk} ratio ${st.ratio.toFixed(3)} stride ${st.stride.toFixed(2)} fontOk ${st.fontOk} webgl2 ${st.webgl2}\n`
-      + `t ${time().toFixed(3)} cycle ${U.uCycle.value.toFixed(3)} scroll ${U.uScroll.value.toFixed(3)} draw calls ${r.calls} tris ${r.triangles} points ${r.points}`;
+      + `A ${st.A!.toFixed(3)} rMax ${st.rMax!.toFixed(3)} rMin ${st.rMin!.toFixed(3)} zL ${st.zL!.toFixed(3)} logoW ${st.logoW!.toFixed(3)} logoPx ${st.logoPx!.toFixed(0)} phiCut ${st.phiCutDeg!.toFixed(1)} (${st.merDropped}/side dropped)\n`
+      + `n ${st.n} ink ${st.wInk}x${st.hInk} ratio ${st.ratio!.toFixed(3)} stride ${st.stride!.toFixed(2)} fontOk ${st.fontOk} webgl2 ${st.webgl2}\n`
+      + `t ${time().toFixed(3)} cycle ${(U.uCycle!.value as number).toFixed(3)} scroll ${(U.uScroll!.value as number).toFixed(3)} draw calls ${r.calls} tris ${r.triangles} points ${r.points}`;
   }
 
   let resizeQueued = false;
@@ -552,7 +586,7 @@ export function startBackground(opts = {}) {
     if (!canvas) throw new Error('startBackground: no canvas');
     if (headless && params.get('throw') === '1') throw new Error('banner self-test (?throw=1)');
     assertConfig();
-    canvas.addEventListener('webglcontextcreationerror', (e) => show(`[webgl] context creation failed: ${e.statusMessage || ''}`));
+    canvas.addEventListener('webglcontextcreationerror', (e) => show(`[webgl] context creation failed: ${(e as WebGLContextEvent).statusMessage || ''}`));
 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'default' });
     renderer.setClearColor(0x000000, 1);
@@ -578,7 +612,7 @@ export function startBackground(opts = {}) {
     api.stats = { n: logo.n, wInk: logo.wInk, hInk: logo.hInk, ratio: logo.ratio, stride: logo.stride, fontOk: logo.fontOk, webgl2: renderer.capabilities.isWebGL2 };
 
     // Shared uniforms.
-    const uf = (v) => ({ value: v });
+    const uf = <T,>(v: T): THREE.IUniform<T> => ({ value: v });
     Object.assign(U, {
       uRmin: uf(0.28), uRmax: uf(1.28), uSigma: uf(C.SIGMA), uYext: uf(C.Y_EXT),
       uRingDY: uf(C.RING_DY), uScroll: uf(0), uMeridians: uf(C.MERIDIANS), uLinePx: uf(C.LINE_PX),
@@ -586,7 +620,7 @@ export function startBackground(opts = {}) {
       uLineOn: uf(new THREE.Vector2(debugLines === 'meridians' ? 0 : 1, debugLines === 'rings' ? 0 : 1)),
       uCycle: uf(0), uAspect: uf(1.6), uLogoW: uf(1), uZL: uf(0.6), uHalfHeightPx: uf(400), uDotWorld: uf(0.01), uRecede: uf(0),
     });
-    const pick = (...names) => Object.fromEntries(names.map((k) => [k, U[k]]));
+    const pick = (...names: string[]): Uniforms => Object.fromEntries(names.map((k) => [k, U[k]!]));
     const bodyUniforms = pick('uRmin', 'uRmax', 'uSigma', 'uYext', 'uRingDY', 'uScroll', 'uMeridians', 'uLinePx', 'uLineMaxCover', 'uSilPx', 'uPhiCut', 'uPhiBand', 'uHalfHeightPx', 'uBodyGrey', 'uGhostAlpha', 'uLineOn');
 
     // Body + grid: one opaque, depth-writing draw call (also the occluder for the particles).
@@ -597,7 +631,7 @@ export function startBackground(opts = {}) {
       uniforms: bodyUniforms, vertexShader: BODY_VERT, fragmentShader: BODY_FRAG,
       side: THREE.FrontSide, transparent: false, depthTest: true, depthWrite: true,
     }));
-    body.material.extensions.derivatives = true;
+    (body.material.extensions as { derivatives?: boolean }).derivatives = true;
     body.frustumCulled = false;
     body.renderOrder = 0;
     scene.add(body);
@@ -608,7 +642,7 @@ export function startBackground(opts = {}) {
         uniforms: bodyUniforms, vertexShader: BODY_VERT, fragmentShader: BODY_FRAG, defines: { GHOST: 1 },
         side: THREE.DoubleSide, transparent: true, depthTest: true, depthWrite: false, depthFunc: THREE.GreaterDepth,
       }));
-      ghost.material.extensions.derivatives = true;
+      (ghost.material.extensions as { derivatives?: boolean }).derivatives = true;
       ghost.frustumCulled = false;
       ghost.renderOrder = 0.5;
       scene.add(ghost);
@@ -659,16 +693,16 @@ export function startBackground(opts = {}) {
         const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
         const onChange = () => { queueLayout(); watchDpr(); };
         if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange, { once: true });
-        else if (typeof mq.addListener === 'function') mq.addListener(function once() { mq.removeListener(once); onChange(); });
+        else if (typeof mq.addListener === 'function') mq.addListener(function once(this: MediaQueryList) { mq.removeListener(once); onChange(); });
       } catch (err) {
-        show(`[dpr] watcher unavailable: ${err && err.message ? err.message : err}`, '#fd3');
+        show(`[dpr] watcher unavailable: ${err instanceof Error ? err.message : err}`, '#fd3');
       }
     };
-    if (window.matchMedia) watchDpr();
+    if (typeof window.matchMedia === 'function') watchDpr();
   }
 
-  init().catch((err) => {
-    show(`[init] ${err && err.stack ? err.stack : err}`);
+  init().catch((err: unknown) => {
+    show(`[init] ${err instanceof Error && err.stack ? err.stack : err}`);
     readyReject(err);
   });
   return api;

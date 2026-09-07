@@ -1,0 +1,37 @@
+---
+// Page shell: the fixed background canvas (#bg) under the normally scrolling foreground (#fg).
+// src/main.ts boots both engines; it is bundled and injected by Astro as a module script.
+// Used as the `layout:` of the markdown pages in src/pages/, which pass their frontmatter.
+import '../styles/style.css';
+
+interface Props {
+  frontmatter: { title: string; description: string };
+}
+const { title, description } = Astro.props.frontmatter;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="icon" href="/assets/logo-old.png">
+</head>
+<body>
+  <!-- Background layer: fixed to the viewport, animates independently of scrolling. -->
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <!-- Foreground layer: scrolls normally. -->
+  <main id="fg">
+    <section class="hero" aria-hidden="true"></section>
+    <div class="content">
+      <slot />
+    </div>
+  </main>
+
+  <script>
+    import '../main';
+  </script>
+</body>
+</html>

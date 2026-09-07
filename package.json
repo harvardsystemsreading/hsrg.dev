@@ -1,0 +1,28 @@
+{
+  "name": "hsrg.dev",
+  "version": "1.0.0",
+  "description": "Harvard Systems Reading Group website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "astro": "astro"
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10"
+  },
+  "dependencies": {
+    "three": "0.160.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@types/three": "0.160.0",
+    "astro": "7.2.10",
+    "typescript": "5.9.3"
+  },
+  "packageManager": "pnpm@11.17.0"
+}

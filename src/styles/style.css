@@ -1,7 +1,7 @@
 /* HSRG site styles.
-   Layering: a fixed background canvas (#bg, driven by js/background.js) under a normally
+   Layering: a fixed background canvas (#bg, driven by src/background.ts) under a normally
    scrolling foreground (#fg). The foreground is a monospace terminal-green reading column;
-   js/foreground.js types it in and drives the background's scroll blur. */
+   src/foreground.ts types it in and drives the background's scroll blur. */
 
 :root {
   /* Foreground palette (F4), ordered by brightness. */
@@ -21,7 +21,7 @@
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   /* Scroll blur (F8). The two *-max/-min values are the taste knobs (set --bg-bright-min to 1
-     for no dimming); js/foreground.js reads them and writes the three live values below. */
+     for no dimming); src/foreground.ts reads them and writes the three live values below. */
   --bg-blur-max: 10px;
   --bg-bright-min: 0.7;
   --bg-blur: 0px;
@@ -31,7 +31,7 @@
 
 @font-face {
   font-family: "Anton";
-  src: url("../assets/fonts/Anton-Regular.ttf") format("truetype");
+  src: url("/assets/fonts/Anton-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -40,8 +40,8 @@
   font-family: "JetBrains Mono";
   /* Variable font, weight axis 100–800. The -variations format hint is preferred where it is
      understood; the plain truetype entry is the fallback for engines that ignore it. */
-  src: url("../assets/fonts/JetBrainsMono-Variable.ttf") format("truetype-variations"),
-       url("../assets/fonts/JetBrainsMono-Variable.ttf") format("truetype");
+  src: url("/assets/fonts/JetBrainsMono-Variable.ttf") format("truetype-variations"),
+       url("/assets/fonts/JetBrainsMono-Variable.ttf") format("truetype");
   font-weight: 100 800;
   font-style: normal;
   font-display: swap;

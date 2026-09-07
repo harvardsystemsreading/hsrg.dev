@@ -7,8 +7,44 @@
 //   F7     deterministic hooks: ?fgDone=1, ?fgFreeze=<unit>:<chars>, ?fgSpeed=<mult>,
 //          plus window.__hsrgFg for debugging.
 //
-// Layout:  §1 CONFIG   §2 helpers   §3 unit building   §4 reveal primitives
+// Layout:  §0 types   §1 CONFIG   §2 helpers   §3 unit building   §4 reveal primitives
 //          §5 typing loop   §6 scroll blur   §7 entry point
+
+// ─────────────────────────────────────────────────────────────────────────── §0 types
+export interface ForegroundOptions {
+  root?: HTMLElement | null;
+  headless?: boolean;
+  fgDone?: boolean;
+  fgFreeze?: string | null;   // '<unitIndex>:<chars>'
+  fgSpeed?: number;
+}
+
+type UnitKind = 'text' | 'instant';
+interface Unit {
+  index: number;
+  el: HTMLElement;
+  kind: UnitKind;
+  chars: HTMLSpanElement[];
+  revealed: number;
+  times: Float64Array | null;
+  done: boolean;
+}
+
+type Mode = 'live' | 'done' | 'frozen';
+
+export interface UnitState { tag: string; kind: UnitKind; chars: number; revealed: number; done: boolean }
+export interface ForegroundState { mode: Mode; index: number; units: UnitState[] }
+export interface ForegroundApi {
+  units: Unit[];
+  completeAll: () => void;
+  freeze: (i: number, n: number) => void;
+  state: () => ForegroundState;
+  config: typeof CONFIG;
+}
+
+declare global {
+  interface Window { __hsrgFg?: ForegroundApi }
+}
 
 // ─────────────────────────────────────────────────────────────────────────── §1 CONFIG
 export const CONFIG = {
@@ -38,11 +74,11 @@ export const CONFIG = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────── §2 helpers
-const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
-const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a || 1), 0, 1); return t * t * (3 - 2 * t); };
+const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
+const smoothstep = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a || 1), 0, 1); return t * t * (3 - 2 * t); };
 
 /** Deterministic PRNG (mulberry32): the per-character jitter must be identical on every load. */
-function mulberry32(seed) {
+function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -52,9 +88,9 @@ function mulberry32(seed) {
   };
 }
 
-/** Headless-only error banner, same element and look as the one js/main.js installs first. */
-function installBanner(headless) {
-  return (message) => {
+/** Headless-only error banner, same element and look as the one src/main.ts installs first. */
+function installBanner(headless: boolean) {
+  return (message: string) => {
     console.error(message);
     if (!headless) return;
     let el = document.getElementById('bg-error');
@@ -74,7 +110,7 @@ function installBanner(headless) {
 // Grapheme clusters, so "🦾" and "📢" are one character each and never split mid-surrogate.
 const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter
   ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-const graphemes = (s) => (segmenter ? Array.from(segmenter.segment(s), (g) => g.segment) : Array.from(s));
+const graphemes = (s: string): string[] => (segmenter ? Array.from(segmenter.segment(s), (g) => g.segment) : Array.from(s));
 
 // ─────────────────────────────────────────────────────────────────── §3 unit building
 /**
@@ -85,11 +121,11 @@ const graphemes = (s) => (segmenter ? Array.from(segmenter.segment(s), (g) => g.
  * elements) are left untouched: wrapping them would change nothing visually but would add
  * characters that must be "typed", and skipping them keeps whitespace collapsing intact.
  */
-function wrapGraphemes(el) {
+function wrapGraphemes(el: HTMLElement): HTMLSpanElement[] {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
-  const chars = [];
+  const nodes: Text[] = [];
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n as Text);
+  const chars: HTMLSpanElement[] = [];
   for (const node of nodes) {
     if (!/\S/.test(node.data)) continue;
     const frag = document.createDocumentFragment();
@@ -100,12 +136,12 @@ function wrapGraphemes(el) {
       frag.appendChild(span);
       chars.push(span);
     }
-    node.parentNode.replaceChild(frag, node);
+    node.parentNode!.replaceChild(frag, node);
   }
   return chars;
 }
 
-function charsPerSecond(el) {
+function charsPerSecond(el: HTMLElement): number {
   const tag = el.tagName;
   if (tag === 'H1') return CONFIG.SPEED.H1;
   if (tag === 'H2') return CONFIG.SPEED.H2;
@@ -113,9 +149,9 @@ function charsPerSecond(el) {
   return CONFIG.SPEED.BODY;
 }
 
-function buildUnits(root) {
-  const els = Array.from(root.querySelectorAll(CONFIG.UNIT_SELECTOR));
-  return els.map((el, index) => {
+function buildUnits(root: HTMLElement): Unit[] {
+  const els = Array.from(root.querySelectorAll<HTMLElement>(CONFIG.UNIT_SELECTOR));
+  return els.map((el, index): Unit => {
     const instant = el.matches(CONFIG.INSTANT_SELECTOR);
     if (instant) {
       el.classList.add('fg-instant');
@@ -128,7 +164,7 @@ function buildUnits(root) {
 }
 
 /** Cumulative reveal times (ms from the unit's start) for every character. */
-function buildTimes(unit, speedMul) {
+function buildTimes(unit: Unit, speedMul: number): Float64Array {
   const step = 1000 / (charsPerSecond(unit.el) * speedMul);
   const rnd = mulberry32(0x9e3779b9 ^ Math.imul(unit.index + 1, 2654435761));
   const times = new Float64Array(unit.chars.length);
@@ -141,14 +177,14 @@ function buildTimes(unit, speedMul) {
 }
 
 // ─────────────────────────────────────────────────────────── §4 reveal primitives
-export function startForeground(opts = {}) {
+export function startForeground(opts: ForegroundOptions = {}): ForegroundApi | null {
   const show = installBanner(!!opts.headless);
-  const root = opts.root || document.querySelector('#fg .content');
+  const root = opts.root || document.querySelector<HTMLElement>('#fg .content');
   if (!root) { show('[foreground] no .content root'); return null; }
 
   const reduced = typeof matchMedia === 'function'
     && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const speedMul = Number.isFinite(opts.fgSpeed) && opts.fgSpeed > 0 ? opts.fgSpeed : 1;
+  const speedMul = typeof opts.fgSpeed === 'number' && Number.isFinite(opts.fgSpeed) && opts.fgSpeed > 0 ? opts.fgSpeed : 1;
 
   const units = buildUnits(root);
   const cursor = document.createElement('span');
@@ -158,42 +194,42 @@ export function startForeground(opts = {}) {
   const removeCursor = () => { if (cursor.parentNode) cursor.parentNode.removeChild(cursor); };
 
   /** The block cursor sits on the next hidden character, so it needs no width of its own. */
-  function placeCursor(unit) {
+  function placeCursor(unit: Unit) {
     // A cursor means this unit has started, even at zero characters: `fg-typing` lets its <li>
-    // marker paint now instead of leaking the list's shape from first paint (see css/style.css).
+    // marker paint now instead of leaking the list's shape from first paint (see src/styles/style.css).
     unit.el.classList.add('fg-typing');
     const next = unit.chars[unit.revealed];
     if (!next) { removeCursor(); return; }
-    if (next.previousSibling !== cursor) next.parentNode.insertBefore(cursor, next);
+    if (next.previousSibling !== cursor) next.parentNode!.insertBefore(cursor, next);
   }
 
-  function setRevealed(unit, n) {
+  function setRevealed(unit: Unit, n: number) {
     n = clamp(n, 0, unit.chars.length);
     // `opacity`, not `visibility`: an unrevealed character must stay in the accessibility tree.
-    for (let i = unit.revealed; i < n; i++) unit.chars[i].style.opacity = '1';
-    for (let i = n; i < unit.revealed; i++) unit.chars[i].style.opacity = '';
+    for (let i = unit.revealed; i < n; i++) unit.chars[i]!.style.opacity = '1';
+    for (let i = n; i < unit.revealed; i++) unit.chars[i]!.style.opacity = '';
     unit.revealed = n;
     if (n > 0) unit.el.classList.add('fg-typing');
   }
 
-  function completeUnit(unit) {
+  function completeUnit(unit: Unit) {
     if (unit.kind === 'instant') unit.el.classList.add('fg-shown');
     else { unit.el.classList.add('fg-done'); unit.revealed = unit.chars.length; }
     unit.done = true;
   }
 
-  function resetUnit(unit) {
+  function resetUnit(unit: Unit) {
     unit.done = false;
     if (unit.kind === 'instant') { unit.el.classList.remove('fg-shown'); return; }
     unit.el.classList.remove('fg-done', 'fg-typing');
-    for (let i = 0; i < unit.revealed; i++) unit.chars[i].style.opacity = '';
+    for (let i = 0; i < unit.revealed; i++) unit.chars[i]!.style.opacity = '';
     unit.revealed = 0;
   }
 
   // ───────────────────────────────────────────────────────────── §5 typing loop
-  let mode = 'live';      // 'live' | 'done' | 'frozen'
+  let mode: Mode = 'live';
   let index = 0;          // the unit currently typing or waiting to start
-  let startAt = null;     // performance.now() timestamp at which units[index] starts typing
+  let startAt: number | null = null;     // performance.now() timestamp at which units[index] starts typing
   let raf = 0;
   let blocked = false;    // the queue's next unit is below the reveal line: idle until something moves
 
@@ -202,9 +238,9 @@ export function startForeground(opts = {}) {
   /** Re-arm the idle loop when the layout may have changed (scroll, resize, reflow). */
   const kickLoop = () => { if (blocked) { blocked = false; runLoop(); } };
 
-  function step(now) {
+  function step(now: number) {
     raf = 0;
-    try { advance(now); } catch (err) { mode = 'done'; show(`[foreground] ${err && err.stack ? err.stack : err}`); return; }
+    try { advance(now); } catch (err) { mode = 'done'; show(`[foreground] ${err instanceof Error && err.stack ? err.stack : err}`); return; }
     if (mode === 'live') runLoop();
   }
 
@@ -216,11 +252,11 @@ export function startForeground(opts = {}) {
    * `rect.bottom <= 0`: a unit that starts above the viewport top would otherwise be typed
    * off-screen, which is the very thing the rule exists to prevent.
    */
-  function advance(now) {
+  function advance(now: number) {
     const vh = window.innerHeight;
     for (let guard = 0; guard <= units.length; guard++) {
       if (index >= units.length) { removeCursor(); mode = 'done'; return; }
-      const unit = units[index];
+      const unit = units[index]!;
       const rect = unit.el.getBoundingClientRect();
       const past = rect.top < 0;
       if (!past && rect.top >= vh * (1 - CONFIG.START_MARGIN)) {
@@ -252,7 +288,7 @@ export function startForeground(opts = {}) {
 
       const elapsed = now - startAt;
       let n = unit.revealed;
-      while (n < unit.times.length && unit.times[n] <= elapsed) n++;
+      while (n < unit.times.length && unit.times[n]! <= elapsed) n++;
       setRevealed(unit, n);
       if (n >= unit.chars.length) {
         completeUnit(unit);
@@ -274,7 +310,7 @@ export function startForeground(opts = {}) {
     index = units.length;
   }
 
-  function freeze(i, n) {
+  function freeze(i: number, n: number) {
     // Reduced motion outranks the test hook: no mid-typing frame, no cursor (F6, last bullet).
     if (reduced) { completeAll(); return; }
     mode = 'frozen';
@@ -292,7 +328,7 @@ export function startForeground(opts = {}) {
     index = i;
   }
 
-  const state = () => ({
+  const state = (): ForegroundState => ({
     mode,
     index,
     units: units.map((u) => ({ tag: u.el.tagName, kind: u.kind, chars: u.chars.length, revealed: u.revealed, done: u.done })),
@@ -351,11 +387,11 @@ export function startForeground(opts = {}) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(kickLoop, () => {});
 
   // ───────────────────────────────────────────────────────────── §7 entry point
-  const api = { units, completeAll, freeze, state, config: CONFIG };
+  const api: ForegroundApi = { units, completeAll, freeze, state, config: CONFIG };
   window.__hsrgFg = api;
 
   const m = typeof opts.fgFreeze === 'string' ? /^(\d+)\s*:\s*(\d+)$/.exec(opts.fgFreeze) : null;
-  if (m) freeze(parseInt(m[1], 10), parseInt(m[2], 10));
+  if (m) freeze(parseInt(m[1]!, 10), parseInt(m[2]!, 10));
   else if (opts.fgDone || reduced) completeAll();
   else runLoop();
 
