@@ -4,14 +4,14 @@ Website of the Harvard Systems Reading Group, built with [Astro](https://astro.b
 
 ## Development
 
-Requires Node.js 22.12+.
+Requires Node.js 22.12+ and pnpm (`corepack enable` installs the pinned version).
 
 ```
-npm install
-npm run dev        # dev server with hot reload
-npm run typecheck  # astro check (TypeScript + .astro templates)
-npm run build      # production build into dist/
-npm run preview    # serve dist/ locally
+pnpm install
+pnpm run dev        # dev server with hot reload
+pnpm run typecheck  # astro check (TypeScript + .astro templates)
+pnpm run build      # production build into dist/
+pnpm run preview    # serve dist/ locally
 ```
 
 ## Docker
