@@ -5,8 +5,8 @@ export default defineConfig({
   site: 'https://hsrg.dev',
   output: 'static',
   build: {
-    // Keep the built HTML readable; the page is small and the scripts are hashed anyway.
-    inlineStylesheets: 'never',
+    // One small stylesheet: inline it and save a request.
+    inlineStylesheets: 'always',
   },
   markdown: {
     // Emit the punctuation exactly as written in the .md files (no curly-quote / dash substitution).
