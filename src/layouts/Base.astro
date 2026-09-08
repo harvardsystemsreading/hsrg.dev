@@ -1,5 +1,5 @@
 ---
-// Document shell for the markdown pages in src/pages/: a one-line header and a single reading column.
+// Document shell for the markdown pages in src/pages/.
 import '../styles/style.css';
 
 interface Props {
@@ -17,11 +17,6 @@ const { title, description } = Astro.props.frontmatter;
   <link rel="icon" href="/assets/logo-old.png">
 </head>
 <body>
-  <header>
-    <p class="title"><a href="/">hsrg.dev</a></p>
-  </header>
-  <main>
-    <slot />
-  </main>
+  <slot />
 </body>
 </html>

@@ -24,8 +24,6 @@ Schedule to be announced.
 
 ## Spring 2026
 
-<div class="table-wrap">
-
 | Date | Topic | Lead |
 |---|---|---|
 | 04/18 | Virtual Private Networks | Heorhii Ambartsumov |
@@ -40,4 +38,3 @@ Schedule to be announced.
 | 02/14 | Modern Vision Systems (joined by [Etched](https://www.etched.com)) ([slides](/talks/Modern_Vision_Systems_HSRG.pdf)) | Anmay Gupta |
 | 02/07 | GPU Kernel Programming ([slides](/talks/GPU_Kernel_Programming_HSRG.pdf)) | Emmanuel Rassou |
 
-</div>
