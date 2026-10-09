@@ -33,6 +33,7 @@ Bring a laptop, and read or browse the suggested material beforehand. We read or
 | Date | Topic | Lead |
 |---|---|---|
 | 10/10 | Timely journey through real-time ([pre-reading](https://www.dca.ufrn.br/~affonso/DCA_STR/aulas/stankovic.pdf)) | Anton Njavro, PhD Cand. @ BU CS |
+| 10/09 | Modern AI Accelerator Architectures | Guest speaker from [Etched](https://www.etched.com/) |
 | 10/03 | Computer Networking from L1-L7 | Ethan Carter Edwards |
 | 09/19 | Fast Data Parallelism ([short reading 1](https://engineering.fb.com/2021/07/15/open-source/fsdp/), [short reading 2](https://main-horse.github.io/posts/visualizing-6d/)) | Sam Enmin Huang |
 | 09/12 | Trusting Trust ([short paper 1](https://www.cs.cmu.edu/~rdriley/487/papers/Thompson_1984_ReflectionsonTrustingTrust.pdf), [paper 2](https://arxiv.org/pdf/2607.24888)) | Ethan Carter Edwards |
